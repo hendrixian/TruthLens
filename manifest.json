@@ -1,8 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Right Sidebar",
+  "name": "TruthLens",
   "version": "1.0",
-  "description": "Toggle sidebar with floating icon",
+  "description": "Fake News and Hate Speech Detection System",
+  "icons": {
+    "16": "img/TruthLens.png",
+    "48": "img/TruthLens.png",
+    "128": "img/TruthLens.png"
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
@@ -13,7 +18,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["img/TruthLens.png"],
+      "resources": ["main.html","img/TruthLens.png"],
       "matches": ["<all_urls>"]
     }
   ]
