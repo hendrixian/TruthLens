@@ -1,6 +1,7 @@
 # Artifacts
 /models/
 /datasets/
+/scanned/
 
 # Notebooks
 *.ipynb
