@@ -5,13 +5,99 @@
   const sidebar = document.createElement("div");
   sidebar.id = "my-extension-sidebar";
   sidebar.style.display = "none";
+  sidebar.innerHTML = `
+    <div id="truthlens-shell">
+      <div id="truthlens-header">
+        <div>
+          <h2 id="truthlens-title">TruthLens</h2>
+          <p id="truthlens-subtitle">See beyond the words</p>
+        </div>
+        <button id="truthlens-close" type="button" aria-label="Close panel">&rarr;</button>
+      </div>
+      <div id="truthlens-status" aria-live="polite"></div>
+    </div>
+  `;
 
-  // === Load HTML into sidebar ===
-  fetch(chrome.runtime.getURL("src/ui/main.html"))
-    .then(res => res.text())
-    .then(html => {
-      sidebar.innerHTML = html;
-    });
+  const statusEl = sidebar.querySelector("#truthlens-status");
+  const closeBtn = sidebar.querySelector("#truthlens-close");
+
+  function setStatus(message, state) {
+    statusEl.textContent = message;
+    statusEl.className = "";
+    statusEl.classList.add("truthlens-status");
+    if (state) {
+      statusEl.classList.add(`truthlens-status-${state}`);
+    }
+  }
+
+  function getArticleText() {
+    const articleNode =
+      document.querySelector("article") ||
+      document.querySelector('[itemprop="articleBody"]') ||
+      document.querySelector(".article-body") ||
+      document.querySelector(".post-content") ||
+      document.querySelector(".entry-content") ||
+      document.querySelector("main");
+
+    if (articleNode && articleNode.innerText) {
+      const text = articleNode.innerText.replace(/\s+\n/g, "\n").trim();
+      if (text.length > 120) return text;
+    }
+
+    const pText = Array.from(document.querySelectorAll("p"))
+      .map((p) => p.innerText.trim())
+      .filter((s) => s.length > 0)
+      .join("\n\n")
+      .trim();
+
+    if (pText.length > 120) return pText;
+    return (document.body?.innerText || "").trim();
+  }
+
+  function getArticleTitle() {
+    const ogTitle = document.querySelector('meta[property="og:title"]')?.content;
+    const h1Title = document.querySelector("h1")?.innerText;
+    const pageTitle = document.title;
+    return (ogTitle || h1Title || pageTitle || "untitled_article").trim();
+  }
+
+  function openContainer() {
+    sidebar.style.display = "block";
+    button.style.display = "none";
+  }
+
+  function closeContainer() {
+    sidebar.style.display = "none";
+    button.style.display = "flex";
+    setStatus("", null);
+  }
+
+  async function runScan() {
+    openContainer();
+    setStatus("Scanning...", "progress");
+
+    const payload = {
+      title: getArticleTitle(),
+      articleText: getArticleText(),
+      url: location.href
+    };
+
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "truthlens_save_scan",
+        payload
+      });
+
+      if (response && response.ok) {
+        setStatus("Scan complete", "success");
+      } else {
+        setStatus("Scan failed", "error");
+      }
+    } catch (e) {
+      setStatus("Scan failed", "error");
+      console.error("TruthLens scan failed:", e);
+    }
+  }
 
   // === Floating button ===
   const button = document.createElement("div");
@@ -21,11 +107,9 @@
   img.src = chrome.runtime.getURL("assets/icons/TruthLens.png");
   button.appendChild(img);
 
-  // === Toggle ===
-  button.addEventListener("click", () => {
-    sidebar.style.display =
-      sidebar.style.display === "none" ? "block" : "none";
-  });
+  // === Scan on click ===
+  button.addEventListener("click", runScan);
+  closeBtn.addEventListener("click", closeContainer);
 
   document.body.appendChild(sidebar);
   document.body.appendChild(button);

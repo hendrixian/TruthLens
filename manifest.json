@@ -3,6 +3,12 @@
   "name": "TruthLens",
   "version": "1.0",
   "description": "Fake News and Hate Speech Detection System",
+  "host_permissions": [
+    "http://127.0.0.1:8765/*"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
   "icons": {
     "16": "assets/icons/TruthLens.png",
     "48": "assets/icons/TruthLens.png",
