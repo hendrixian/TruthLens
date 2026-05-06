@@ -7,7 +7,7 @@
   sidebar.style.display = "none";
 
   // === Load HTML into sidebar ===
-  fetch(chrome.runtime.getURL("main.html"))
+  fetch(chrome.runtime.getURL("src/ui/main.html"))
     .then(res => res.text())
     .then(html => {
       sidebar.innerHTML = html;
@@ -18,7 +18,7 @@
   button.id = "my-extension-button";
 
   const img = document.createElement("img");
-  img.src = chrome.runtime.getURL("img/TruthLens.png");
+  img.src = chrome.runtime.getURL("assets/icons/TruthLens.png");
   button.appendChild(img);
 
   // === Toggle ===

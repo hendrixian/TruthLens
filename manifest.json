@@ -4,21 +4,21 @@
   "version": "1.0",
   "description": "Fake News and Hate Speech Detection System",
   "icons": {
-    "16": "img/TruthLens.png",
-    "48": "img/TruthLens.png",
-    "128": "img/TruthLens.png"
+    "16": "assets/icons/TruthLens.png",
+    "48": "assets/icons/TruthLens.png",
+    "128": "assets/icons/TruthLens.png"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "css": ["styles.css"],
+      "js": ["src/content/content.js"],
+      "css": ["src/ui/styles.css"],
       "run_at": "document_idle"
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["main.html","img/TruthLens.png"],
+      "resources": ["src/ui/main.html","assets/icons/TruthLens.png"],
       "matches": ["<all_urls>"]
     }
   ]
