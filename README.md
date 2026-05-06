@@ -13,7 +13,7 @@ After modifying the code
 2. Refresh the webpage
 
 
-run local_scan_server first so that the system save the scanned file to the project directory
-
-
-the scanned folder is just to test if the scanning works or not
+To scan the article
+1. Run "python -B local_scan_server.py" first so that the system save the scanned file to the project directory
+2. Click the icon and it will automatically saved
+3. The scanned folder is just to test if the scanning works or not
