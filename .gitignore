@@ -1,0 +1,13 @@
+# Artifacts
+/models/
+/datasets/
+
+# Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
