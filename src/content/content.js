@@ -30,7 +30,45 @@
     }
   }
 
+  function formatPrediction(label, confidence) {
+    const normalizedLabel = String(label || "").trim().toLowerCase();
+    if (!normalizedLabel) return "";
+
+    const score =
+      typeof confidence === "number" && Number.isFinite(confidence)
+        ? confidence.toFixed(4)
+        : "n/a";
+
+    return `${normalizedLabel} (confidence: ${score})`;
+  }
+
   function getArticleText() {
+    const NOISE_LINE_PATTERNS = [
+      /^advertisement$/i,
+      /^skip advertisement$/i,
+      /^share full article$/i,
+      /^related content$/i,
+      /^read \d+ comments$/i
+    ];
+
+    function normalizeLine(value) {
+      return (value || "").replace(/\s+/g, " ").trim();
+    }
+
+    function isNoiseLine(value) {
+      const line = normalizeLine(value);
+      if (!line) return true;
+      return NOISE_LINE_PATTERNS.some((p) => p.test(line));
+    }
+
+    function collectParagraphText(root) {
+      if (!root) return "";
+      const lines = Array.from(root.querySelectorAll("p"))
+        .map((p) => normalizeLine(p.innerText))
+        .filter((line) => !isNoiseLine(line));
+      return lines.join("\n\n").trim();
+    }
+
     const articleNode =
       document.querySelector("article") ||
       document.querySelector('[itemprop="articleBody"]') ||
@@ -39,16 +77,22 @@
       document.querySelector(".entry-content") ||
       document.querySelector("main");
 
+    const scopedParagraphText = collectParagraphText(articleNode);
+    if (scopedParagraphText.length > 120) {
+      return scopedParagraphText;
+    }
+
     if (articleNode && articleNode.innerText) {
-      const text = articleNode.innerText.replace(/\s+\n/g, "\n").trim();
+      const text = articleNode.innerText
+        .split("\n")
+        .map((line) => normalizeLine(line))
+        .filter((line) => !isNoiseLine(line))
+        .join("\n")
+        .trim();
       if (text.length > 120) return text;
     }
 
-    const pText = Array.from(document.querySelectorAll("p"))
-      .map((p) => p.innerText.trim())
-      .filter((s) => s.length > 0)
-      .join("\n\n")
-      .trim();
+    const pText = collectParagraphText(document);
 
     if (pText.length > 120) return pText;
     return (document.body?.innerText || "").trim();
@@ -89,7 +133,8 @@
       });
 
       if (response && response.ok) {
-        setStatus("Scan complete", "success");
+        const predictionText = formatPrediction(response.label, response.confidence);
+        setStatus(predictionText || "Prediction unavailable", "success");
       } else {
         setStatus("Scan failed", "error");
       }

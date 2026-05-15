@@ -23,7 +23,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       sendResponse({
         ok: true,
-        filePath: data.file_path || ""
+        filePath: data.file_path || "",
+        label: data.label || "",
+        confidence:
+          typeof data.confidence === "number" ? data.confidence : null
       });
     } catch (error) {
       console.error("TruthLens save failed:", error);
