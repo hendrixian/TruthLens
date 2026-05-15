@@ -10,6 +10,13 @@ HOST = "127.0.0.1"
 PORT = 8765
 PROJECT_ROOT = Path(__file__).resolve().parent
 SCAN_DIR = PROJECT_ROOT / "scanned"
+MODEL_DIR = PROJECT_ROOT / "models" / "FakeNews" / "best_model"
+MAX_LENGTH = 256
+WINDOW_STRIDE = 192
+MAX_WINDOWS = 12
+
+_PREDICTOR_BUNDLE: dict | None = None
+_PREDICTOR_ERROR: str | None = None
 
 
 def sanitize_file_name(title: str) -> str:
@@ -46,6 +53,65 @@ def build_payload(data: dict) -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def load_predictor_bundle() -> dict:
+    global _PREDICTOR_BUNDLE, _PREDICTOR_ERROR
+    if _PREDICTOR_BUNDLE is not None:
+        return _PREDICTOR_BUNDLE
+    if _PREDICTOR_ERROR is not None:
+        raise RuntimeError(_PREDICTOR_ERROR)
+
+    try:
+        import torch
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
+        from predict_scanned import build_model_input, load_id2label, predict_text
+
+        if not MODEL_DIR.exists():
+            raise FileNotFoundError(f"Model dir not found: {MODEL_DIR}")
+
+        id2label = load_id2label(MODEL_DIR)
+        tokenizer = AutoTokenizer.from_pretrained(str(MODEL_DIR))
+        model = AutoModelForSequenceClassification.from_pretrained(str(MODEL_DIR))
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model.to(device)
+        model.eval()
+
+        _PREDICTOR_BUNDLE = {
+            "model": model,
+            "tokenizer": tokenizer,
+            "device": device,
+            "id2label": id2label,
+            "build_model_input": build_model_input,
+            "predict_text": predict_text,
+        }
+        return _PREDICTOR_BUNDLE
+    except Exception as exc:
+        _PREDICTOR_ERROR = str(exc)
+        raise
+
+
+def predict_label_confidence(title: str, article_text: str) -> dict:
+    bundle = load_predictor_bundle()
+    model_input = bundle["build_model_input"](title, article_text)
+    if not model_input:
+        raise ValueError("No usable text for prediction")
+
+    pred = bundle["predict_text"](
+        model_input,
+        model=bundle["model"],
+        tokenizer=bundle["tokenizer"],
+        device=bundle["device"],
+        id2label=bundle["id2label"],
+        max_length=MAX_LENGTH,
+        window_stride=WINDOW_STRIDE,
+        max_windows=MAX_WINDOWS,
+    )
+    return {
+        "label": str(pred.get("label", "") or ""),
+        "confidence": float(pred.get("confidence", 0.0)),
+    }
 
 
 class ScanHandler(BaseHTTPRequestHandler):
@@ -89,12 +155,18 @@ class ScanHandler(BaseHTTPRequestHandler):
             target = next_available_path(sanitize_file_name(title))
             target.write_text(payload, encoding="utf-8")
 
+            response = {
+                "ok": True,
+                "file_path": str(target),
+            }
+            try:
+                response.update(predict_label_confidence(title, article_text))
+            except Exception as pred_exc:
+                response["prediction_error"] = str(pred_exc)
+
             self._send_json(
                 200,
-                {
-                    "ok": True,
-                    "file_path": str(target),
-                },
+                response,
             )
         except Exception as exc:
             self._send_json(500, {"ok": False, "error": str(exc)})
@@ -117,4 +189,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
