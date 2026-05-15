@@ -11,11 +11,6 @@
 1. Reload the extension in `chrome://extensions`.
 2. Refresh the webpage.
 
-## Scan An Article
-1. Start the local scan server:
-   `python -B local_scan_server.py`
-2. Click the TruthLens icon on the page.
-3. Scanned files are saved in `scanned/` for testing.
 
 ## Fake News 
 ### Requirements
